@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="htmlRoot">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">مشرف الدور - كلية سان مارك (القسم الإعدادي) من أعداد كيرلس الديب  </title>
+    <!-- SheetJS for Excel / CSV Parsing -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <!-- Firebase (Cloud Sync + Offline Cache) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script>(function(){var w=console.warn;console.warn=function(){var m=arguments[0];if(typeof m==='string'&&m.indexOf('cdn.tailwindcss.com')>-1)return;return w.apply(console,arguments);};})();</script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        stmark: {
+                            blue: '#1a365d',
+                            darkblue: '#0f223f',
+                            gold: '#d69e2e',
+                            lightgold: '#fefcbf',
+                            accent: '#2b6cb0'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f4f6f9; }
+        #cloudSyncStatus { display: none !important; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col justify-between">
+
+    <!-- Header -->
+    <header class="bg-stmark-blue text-white shadow-md no-print">
+        <div class="container mx-auto px-4 py-3 flex flex-wrap justify-between items-center">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="bg-stmark-gold text-stmark-darkblue font-black px-3 py-2 rounded-lg text-xl shadow">SM</div>
+                <div>
+                    <h1 class="text-lg font-bold" data-i18n="headerTitle">كلية سان مارك - القسم الإعدادي</h1>
+                    <p class="text-xs text-slate-300" data-i18n="headerSubtitle">نظام إدارة الإشراف اليومي وسلوك الطلاب</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3 space-x-reverse mt-2 sm:mt-0 flex-wrap gap-2">
+                <span id="currentYearBadge" class="bg-stmark-gold/20 border border-stmark-gold text-stmark-gold px-3 py-1 rounded-full text-xs font-bold"></span>
+                <button onclick="toggleLanguage()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                    <i class="fa-solid fa-globe ml-1"></i> <span id="langBtnText">FR / العربية</span>
+                </button>
+                <button onclick="promptHodLogin()" class="bg-stmark-gold hover:bg-amber-600 text-stmark-darkblue px-3 py-1.5 rounded-lg text-sm font-bold transition shadow"><i class="fa-solid fa-lock ml-1"></i> <span data-i18n="btnHodSettings">إعدادات رئيس القسم</span></button>
+                <button onclick="saveAppDataFile()" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg text-sm transition"><i class="fa-solid fa-download ml-1"></i> <span data-i18n="btnSaveFile">حفظ البيانات</span></button>
+                <button onclick="shareAppData()" class="bg-sky-600 hover:bg-sky-700 px-3 py-1.5 rounded-lg text-sm transition font-bold text-white shadow"><i class="fa-solid fa-share-nodes ml-1"></i> مشاركة (واتساب/أخرى)</button>
+                <label class="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-sm transition cursor-pointer flex items-center font-bold shadow">
+                    <i class="fa-solid fa-file-excel ml-1"></i> <span data-i18n="btnImportExcel">استيراد شيت إكسيل (Excel)</span>
+                    <input type="file" id="importFile" onchange="loadAppDataFile(event)" class="hidden" accept=".xlsx,.xls,.csv,.json">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6 flex-grow">
+        <div class="flex flex-wrap gap-2 mb-6 border-b border-slate-300 pb-3 no-print">
+            <button onclick="switchTab('supervisor')" id="tabBtn-supervisor" class="tab-btn bg-stmark-blue text-white px-5 py-2.5 rounded-xl font-bold shadow transition flex items-center">
+                <i class="fa-solid fa-chalkboard-user ml-2"></i> <span data-i18n="tabSupervisor">لوحة مشرفي الدور</span>
+            </button>
+            <button onclick="switchTab('hod')" id="tabBtn-hod" class="tab-btn bg-white text-slate-700 hover:bg-slate-200 px-5 py-2.5 rounded-xl font-bold shadow transition flex items-center relative">
+                <i class="fa-solid fa-user-shield ml-2"></i> <span data-i18n="tabHod">لوحة رئيس القسم</span>
+                <span id="hodAlertCount" class="absolute -top-1 -left-1 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center font-bold hidden">0</span>
+            </button>
+            <button onclick="switchTab('history')" id="tabBtn-history" class="tab-btn bg-white text-slate-700 hover:bg-slate-200 px-5 py-2.5 rounded-xl font-bold shadow transition flex items-center">
+                <i class="fa-solid fa-clock-rotate-left ml-2"></i> <span data-i18n="tabHistory">السجل التاريخي (History)</span>
+            </button>
+        </div>
+
+        <!-- 1. Supervisor Tab -->
+        <div id="tab-supervisor" class="tab-content space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-stmark-blue" data-i18n="supTitle">تسجيل مخالفات وخروج الطلاب</h2>
+                        <p class="text-sm text-slate-500" data-i18n="supDesc">اختر الصف الدراسي والفصل (A, B, C, D, E) ثم حدد الطالب لتسجيل سبب الخروج والتفاصيل</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <select id="selGrade" onchange="updateClassList()" class="bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm font-semibold focus:ring-2 focus:ring-stmark-blue">
+                            <option value="الأول الإعدادي" data-i18n="grade1">الأول الإعدادي</option>
+                            <option value="الثاني الإعدادي" data-i18n="grade2">الثاني الإعدادي</option>
+                            <option value="الثالث الإعدادي" data-i18n="grade3">الثالث الإعدادي</option>
+                        </select>
+                        <select id="selClass" onchange="renderStudentsGrid()" class="bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm font-semibold focus:ring-2 focus:ring-stmark-blue">
+                        </select>
+                    </div>
+                </div>
+                <div id="studentsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- 2. HOD Tab -->
+        <div id="tab-hod" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-stmark-blue"><i class="fa-solid fa-users-gear text-stmark-gold ml-2"></i> إدارة الطلاب اليدوية (رئيس القسم)</h3>
+                        <p class="text-xs text-slate-500">إضافة طالب جديد، إلغاء طالب، أو حذف جميع الطلاب من النظام دفعة واحدة</p>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="promptAddStudent()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition flex items-center">
+                            <i class="fa-solid fa-user-plus ml-2"></i> إضافة طالب
+                        </button>
+                        <button onclick="promptRemoveStudent()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition flex items-center">
+                            <i class="fa-solid fa-user-minus ml-2"></i> إلغاء طالب
+                        </button>
+                        <button onclick="promptRemoveAllStudents()" class="bg-rose-700 hover:bg-rose-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition flex items-center">
+                            <i class="fa-solid fa-users-slash ml-2"></i> حذف الكل
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-stmark-blue"><i class="fa-solid fa-bell text-stmark-gold ml-2"></i> <span data-i18n="hodAlertsTitle">تنبيهات خطط العلاج (رئيس القسم حصرياً)</span></h2>
+                        <p class="text-sm text-slate-500" data-i18n="hodAlertsDesc">الطلاب الذين وصلوا لعدد مرات تكرار تستوجب خطة علاجية وإجراء فوري (الأحدث في الأعلى)</p>
+                    </div>
+                    <button onclick="promptHodLogin()" class="bg-stmark-blue text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-stmark-darkblue transition">
+                        <i class="fa-solid fa-lock ml-1"></i> <span data-i18n="btnHodSettings">إعدادات رئيس القسم</span>
+                    </button>
+                </div>
+                <div id="hodAlertsContainer" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- 3. History Tab -->
+        <div id="tab-history" class="tab-content hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-stmark-blue" data-i18n="historyTitle">السجل التاريخي للطلاب (أصحاب المخالفات فقط)</h2>
+                        <p class="text-sm text-slate-500" data-i18n="historyDesc">استعرض سجلات الخروج، درجات السلوك، والخطط العلاجية المتدرجة</p>
+                    </div>
+                    <div class="flex gap-3 flex-wrap items-center">
+                        <div class="relative">
+                            <input type="text" id="historySearchInput" oninput="renderHistoryTable()" placeholder="ابحث باسم الطالب..." class="bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 pr-9 text-sm font-semibold focus:ring-2 focus:ring-stmark-blue">
+                            <i class="fa-solid fa-search absolute right-3 top-3 text-slate-400 text-xs"></i>
+                        </div>
+                        <select id="historyFilterGrade" onchange="renderHistoryTable()" class="bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm font-semibold">
+                            <option value="" data-i18n="allGrades">جميع الصفوف</option>
+                            <option value="الأول الإعدادي" data-i18n="grade1">الأول الإعدادي</option>
+                            <option value="الثاني الإعدادي" data-i18n="grade2">الثاني الإعدادي</option>
+                            <option value="الثالث الإعدادي" data-i18n="grade3">الثالث الإعدادي</option>
+                        </select>
+                        <select id="exportGradeSelect" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold">
+                            <option value="">كل الدفعات (للإكسيل)</option>
+                            <option value="الأول الإعدادي">الأول الإعدادي</option>
+                            <option value="الثاني الإعدادي">الثاني الإعدادي</option>
+                            <option value="الثالث الإعدادي">الثالث الإعدادي</option>
+                        </select>
+                        <select id="exportClassSelect" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold">
+                            <option value="">كل الفصول (للإكسيل)</option>
+                            <option value="A">فصل A</option>
+                            <option value="B">فصل B</option>
+                            <option value="C">فصل C</option>
+                            <option value="D">فصل D</option>
+                            <option value="E">فصل E</option>
+                        </select>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="exportConductExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition flex items-center">
+                                <i class="fa-solid fa-file-excel ml-1"></i> إكسيل درجات السلوك
+                            </button>
+                            <button onclick="exportDetailedExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition flex items-center">
+                                <i class="fa-solid fa-file-excel ml-1"></i> إكسيل التاريخ التفصيلي
+                            </button>
+                            <button onclick="exportExpelledExcel()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow transition flex items-center">
+                                <i class="fa-solid fa-file-excel ml-1"></i> <span data-i18n="btnExportExpelled">إكسيل المطرودين فقط</span>
+                            </button>
+                        </div>
+                        <button onclick="openArchiveModal()" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center">
+                            <i class="fa-solid fa-box-archive ml-1"></i> أرشيف السنين السابقة
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-sm border-b">
+                                <th class="p-3" data-i18n="thName">اسم الطالب</th>
+                                <th class="p-3" data-i18n="thClass">الصف / الفصل</th>
+                                <th class="p-3" data-i18n="thConduct">درجة السلوك</th>
+                                <th class="p-3" data-i18n="thExits">مرات الخروج</th>
+                                <th class="p-3" data-i18n="thPlan">آخر خطة علاجية</th>
+                                <th class="p-3 text-center" data-i18n="thActions">الإجراءات والتقرير</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="text-sm divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="fixed bottom-5 left-5 z-[80] transform translate-y-32 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 space-x-reverse text-sm font-bold">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMessage">تمت العملية بنجاح!</span>
+    </div>
+
+    <!-- Custom Confirm / Prompt Modal -->
+    <div id="customConfirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <h3 id="confirmTitle" class="text-lg font-bold text-stmark-blue border-b pb-2">تأكيد الإجراء</h3>
+            <p id="confirmMessage" class="text-sm text-slate-600 font-semibold"></p>
+            <div id="confirmPasswordSection" class="hidden space-y-2">
+                <label class="block text-xs font-bold text-slate-700">كلمة مرور رئيس القسم:</label>
+                <input type="password" id="confirmPasswordInput" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm" placeholder="أدخل كلمة المرور...">
+            </div>
+            <div class="flex justify-end space-x-3 space-x-reverse pt-2">
+                <button id="confirmCancelBtn" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-xl text-sm font-bold transition">إلغاء</button>
+                <button id="confirmOkBtn" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition shadow">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="incidentModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-stmark-blue border-b pb-2" data-i18n="modalIncidentTitle">تسجيل مخالفة / خروج طالب</h3>
+            <div id="incidentStudentInfo" class="bg-slate-50 p-3 rounded-xl text-sm font-semibold text-slate-700"></div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1" data-i18n="lblSupervisor">اسم مشرف الدور:</label>
+                    <div class="flex gap-2">
+                        <select id="incSupervisor" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm max-h-40 overflow-y-auto"></select>
+                        <input type="text" id="incSupervisorCustom" placeholder="اكتب اسم المشرف..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm hidden">
+                        <button type="button" onclick="toggleCustomSupervisor()" id="toggleSupBtn" class="bg-slate-200 hover:bg-slate-300 px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">مدرس آخر</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1" data-i18n="lblPeriod">الحصة / الفترة:</label>
+                    <select id="incPeriod" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm max-h-40 overflow-y-auto">
+                        <option value="الحصة الأولى">الحصة الأولى (1)</option>
+                        <option value="الحصة الثانية">الحصة الثانية (2)</option>
+                        <option value="الحصة الثالثة">الحصة الثالثة (3)</option>
+                        <option value="الحصة الرابعة">الحصة الرابعة (4)</option>
+                        <option value="الحصة الخامسة">الحصة الخامسة (5)</option>
+                        <option value="الحصة السادسة">الحصة السادسة (6)</option>
+                        <option value="الحصة السابعة">الحصة السابعة (7)</option>
+                        <option value="الحصة الثامنة">الحصة الثامنة (8)</option>
+                        <option value="فسحة أولى">فسحة أولى</option>
+                        <option value="فسحة ثانية">فسحة ثانية</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1" data-i18n="lblSchool">اسم المدرسة:</label>
+                    <input type="text" id="incSchool" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm" value="كلية سان مارك">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1" data-i18n="lblSubject">المادة:</label>
+                    <div class="flex gap-2">
+                        <select id="incSubject" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm max-h-48 overflow-y-auto"></select>
+                        <input type="text" id="incSubjectCustom" placeholder="اكتب اسم المادة..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm hidden">
+                        <button type="button" onclick="toggleCustomSubject()" id="toggleSubjectBtn" class="bg-slate-200 hover:bg-slate-300 px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">مادة أخرى</button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1" data-i18n="lblReason">سبب الطرد / الخروج:</label>
+                <input type="text" id="incReason" list="reasonsList" placeholder="اختر أو اكتب سبب الخروج..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm">
+                <datalist id="reasonsList" class="max-h-48 overflow-y-auto"></datalist>
+            </div>
+
+            <div class="flex justify-end space-x-3 space-x-reverse pt-2">
+                <button onclick="closeIncidentModal()" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-xl text-sm font-bold transition">إلغاء</button>
+                <button onclick="submitIncident()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition shadow">حفظ وحساب</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Incident Modal -->
+    <div id="cancelIncidentModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-stmark-blue"><i class="fa-solid fa-trash-can text-red-600 ml-2"></i> إلغاء مخالفة للطالب (من الأحدث إلى الأقدم)</h3>
+                <button onclick="closeCancelIncidentModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="cancelIncidentStudentInfo" class="bg-slate-50 p-3 rounded-xl text-sm font-semibold text-slate-700"></div>
+            <p class="text-xs text-slate-500">اختر المخالفة المراد إلغاؤها وحذفها نهائياً من سجل الطالب:</p>
+            <div id="cancelIncidentListContainer" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1"></div>
+            <div class="flex justify-end pt-2 border-t">
+                <button onclick="closeCancelIncidentModal()" class="bg-slate-200 hover:bg-slate-300 px-5 py-2 rounded-xl text-sm font-bold transition">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOD Login Modal -->
+    <div id="hodLoginModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4">
+            <h3 class="text-lg font-bold text-stmark-blue border-b pb-2"><i class="fa-solid fa-lock text-stmark-gold ml-1"></i> <span data-i18n="hodLoginTitle">دخول رئيس القسم</span></h3>
+            <p class="text-xs text-slate-500" data-i18n="hodLoginDesc">أدخل كلمة المرور الخاصة برئيس القسم للوصول لتعديل الإعدادات أو إلغاء المخالفات المعتمدة</p>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1" data-i18n="lblPassword">كلمة المرور:</label>
+                <input type="password" id="hodPasswordInput" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm" placeholder="أدخل كلمة المرور...">
+            </div>
+            <div class="flex justify-end space-x-3 space-x-reverse pt-2">
+                <button onclick="closeHodLoginModal()" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-xl text-sm font-bold transition" data-i18n="btnCancel">إلغاء</button>
+                <button onclick="verifyHodLogin()" class="bg-stmark-gold hover:bg-amber-600 text-stmark-darkblue px-5 py-2 rounded-xl text-sm font-bold transition" data-i18n="btnLogin">دخول</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Add Student Modal -->
+    <div id="manualAddStudentModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 class="text-lg font-bold text-stmark-blue border-b pb-2"><i class="fa-solid fa-user-plus text-emerald-600 ml-1"></i> إضافة طالب جديد (يدويّاً)</h3>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">1. تحديد الدفعة (الصف الدراسي):</label>
+                <select id="manualAddGrade" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm max-h-40 overflow-y-auto">
+                    <option value="الأول الإعدادي">الأول الإعدادي</option>
+                    <option value="الثاني الإعدادي">الثاني الإعدادي</option>
+                    <option value="الثالث الإعدادي">الثالث الإعدادي</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">2. تحديد الفصل:</label>
+                <select id="manualAddClass" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm max-h-40 overflow-y-auto"></select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">3. كتابة اسم الطالب:</label>
+                <input type="text" id="manualAddName" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm" placeholder="أدخل اسم الطالب الثلاثي/الرباعي...">
+            </div>
+            <div class="flex justify-end space-x-3 space-x-reverse pt-2">
+                <button onclick="closeManualAddStudentModal()" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-xl text-sm font-bold transition">إلغاء</button>
+                <button onclick="submitManualAddStudent()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition shadow">حفظ وإضافة الطالب</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Remove Student Modal -->
+    <div id="manualRemoveStudentModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 class="text-lg font-bold text-stmark-blue border-b pb-2"><i class="fa-solid fa-user-minus text-red-600 ml-1"></i> إلغاء / حذف طالب يدويّاً</h3>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">تحديد الدفعة:</label>
+                <select id="manualRemGrade" onchange="populateManualRemClasses()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm max-h-40 overflow-y-auto">
+                    <option value="الأول الإعدادي">الأول الإعدادي</option>
+                    <option value="الثاني الإعدادي">الثاني الإعدادي</option>
+                    <option value="الثالث الإعدادي">الثالث الإعدادي</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">تحديد الفصل:</label>
+                <select id="manualRemClass" onchange="populateManualRemStudents()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm max-h-40 overflow-y-auto"></select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">اختر الطالب المراد حذفه:</label>
+                <select id="manualRemStudentId" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm max-h-48 overflow-y-auto"></select>
+            </div>
+            <div class="flex justify-end space-x-3 space-x-reverse pt-2">
+                <button onclick="closeManualRemoveStudentModal()" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded-xl text-sm font-bold transition">إلغاء</button>
+                <button onclick="submitManualRemoveStudent()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition shadow">حذف الطالب</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl space-y-6 my-8">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-xl font-bold text-stmark-blue"><i class="fa-solid fa-gear ml-2"></i> <span data-i18n="settingsTitle">إعدادات رئيس القسم والخطط العلاجية</span></h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="space-y-6 max-h-[65vh] overflow-y-auto pr-2">
+                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 space-y-3">
+                    <div>
+                        <h4 class="font-bold text-stmark-blue mb-1"><i class="fa-solid fa-broom ml-1"></i> تنظيف الفصول والقوائم السابقة</h4>
+                        <p class="text-xs text-slate-500">إزالة الاختيارات والفصول الزائدة التي تمت إضافتها مسبقاً من ملفات الإكسيل وإرجاع الفصول الأساسية فقط (A, B, C, D, E)</p>
+                    </div>
+                    <div>
+                        <button onclick="resetExtraClasses()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition flex items-center shadow">
+                            <i class="fa-solid fa-trash-can ml-1.5"></i> ازالة اختيارات سابقة
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 space-y-4">
+                    <div>
+                        <h4 class="font-bold text-stmark-blue mb-1"><i class="fa-solid fa-clock-rotate-left ml-1"></i> أسباب الخروج المعلقة (المضافة حديثاً من المشرفين)</h4>
+                        <p class="text-xs text-slate-500">الأسباب الجديدة التي كتبها مشرفو الدور وتنتظر اعتمادك أو تعديلها لإضافتها لقائمة الأسباب الرسمية</p>
+                    </div>
+                    <div id="pendingReasonsConfigList" class="space-y-2 max-h-40 overflow-y-auto pr-1 border bg-white p-3 rounded-xl"></div>
+                </div>
+
+                <div class="bg-sky-50 p-4 rounded-xl border border-sky-200 space-y-3">
+                    <div>
+                        <h4 class="font-bold text-stmark-blue mb-1"><i class="fa-solid fa-file-export ml-1"></i> الحفظ والاستعادة المستقل للأعدادات فقط</h4>
+                        <p class="text-xs text-slate-500">لنقل الإعدادات (الأسباب، الخطط، المشرفين، المواد، كلمة المرور) لجهاز آخر غير متصل بالشبكة</p>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="exportSettingsOnly()" class="bg-sky-600 hover:bg-sky-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition flex items-center shadow">
+                            <i class="fa-solid fa-download ml-1"></i> تصدير الإعدادات وحدها (JSON)
+                        </button>
+                        <label class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-2 rounded-xl font-bold transition cursor-pointer flex items-center shadow">
+                            <i class="fa-solid fa-upload ml-1"></i> استيراد الإعدادات وحدها
+                            <input type="file" id="importSettingsFile" onchange="importSettingsOnly(event)" class="hidden" accept=".json">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border space-y-4">
+                    <div>
+                        <h4 class="font-bold text-stmark-blue mb-1">إدارة أسباب الخروج والطرد الرسمية</h4>
+                        <p class="text-xs text-slate-500">الأسباب المتاحة للمشرفين عند تسجيل المخالفات</p>
+                    </div>
+                    <div id="reasonsConfigList" class="space-y-2 max-h-40 overflow-y-auto pr-1 border bg-white p-3 rounded-xl"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="newReasonInput" placeholder="أدخل سبب خروج جديد..." class="bg-white border rounded-xl px-3 py-2 text-sm flex-grow">
+                        <button onclick="addReasonFromSettings()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-plus ml-1"></i> إضافة سبب</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border">
+                    <h4 class="font-bold text-stmark-blue mb-2" data-i18n="yearSettingsTitle">إدارة السنة الدراسية وإعادة الضبط (Reset)</h4>
+                    <div class="flex gap-3">
+                        <input type="text" id="settingCurrentYear" class="bg-white border rounded-xl px-3 py-2 text-sm flex-grow" placeholder="السنة الدراسية (مثال: 2026-2027)">
+                        <button onclick="saveYearSetting()" class="bg-stmark-blue text-white px-4 py-2 rounded-xl text-sm font-bold" data-i18n="btnUpdateYear">تحديث السنة</button>
+                    </div>
+                    <div class="mt-3 pt-3 border-t flex justify-between items-center flex-wrap gap-2">
+                        <span class="text-xs text-red-600 font-semibold" data-i18n="resetDesc">إعادة ضبط عام جديد (تصفير العدادات وحفظ الأرشيف):</span>
+                        <button onclick="performYearReset()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold" data-i18n="btnResetYear">إعادة ضبط السنة (Reset)</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border">
+                    <h4 class="font-bold text-stmark-blue mb-1" data-i18n="passSettingsTitle">إعداد كلمة مرور رئيس القسم (اختياري)</h4>
+                    <p class="text-xs text-slate-500 mb-3" data-i18n="passSettingsDesc">إذا تركت هذا الحقل فارغاً وحفظت، فلن يطلب البرنامج كلمة مرور في أي جزء منه.</p>
+                    <div class="flex gap-3">
+                        <input type="password" id="settingHodPass" class="bg-white border rounded-xl px-3 py-2 text-sm flex-grow" placeholder="أدخل كلمة المرور الجديدة...">
+                        <button onclick="saveHodPassword()" class="bg-stmark-blue text-white px-4 py-2 rounded-xl text-sm font-bold" data-i18n="btnSavePass">حفظ كلمة المرور</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border space-y-4">
+                    <div>
+                        <h4 class="font-bold text-stmark-blue mb-1">إدارة مشرفي الدور (المفتشين)</h4>
+                        <p class="text-xs text-slate-500">إضافة أو حذف أسماء مشرفي الدور لتظهر في القائمة المنسدلة عند تسجيل المخالفات</p>
+                    </div>
+                    <div id="supervisorsConfigList" class="space-y-2 max-h-40 overflow-y-auto pr-1 border bg-white p-3 rounded-xl"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="newSupervisorInput" placeholder="أدخل اسم المشرف الجديد..." class="bg-white border rounded-xl px-3 py-2 text-sm flex-grow">
+                        <button onclick="addSupervisorFromSettings()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-plus ml-1"></i> إضافة مشرف</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border space-y-4">
+                    <div>
+                        <h4 class="font-bold text-stmark-blue mb-1">إدارة المواد الدراسية</h4>
+                        <p class="text-xs text-slate-500">إضافة أو حذف أسماء المواد لتظهر في القائمة عند تسجيل المخالفة</p>
+                    </div>
+                    <div id="subjectsConfigList" class="space-y-2 max-h-40 overflow-y-auto pr-1 border bg-white p-3 rounded-xl"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="newSubjectInput" placeholder="أدخل اسم المادة الجديدة..." class="bg-white border rounded-xl px-3 py-2 text-sm flex-grow">
+                        <button onclick="addSubjectFromSettings()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-plus ml-1"></i> إضافة مادة</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border space-y-4">
+                    <div>
+                        <h4 class="font-bold text-stmark-blue mb-1" data-i18n="plansTitle">إعداد الخطط العلاجية (بلا حدود)</h4>
+                        <p class="text-xs text-slate-500" data-i18n="plansDesc">يتضمن كل خطة علاجية: عدد المرات + الإجراء المتبع + رسالة ولي الأمر + خيار خصم درجة السلوك</p>
+                    </div>
+                    <div id="treatmentPlansConfig" class="space-y-3 max-h-60 overflow-y-auto pr-1 border bg-white p-3 rounded-xl"></div>
+                    <div class="bg-white p-4 rounded-xl border space-y-3">
+                        <h5 class="font-bold text-xs text-stmark-blue" data-i18n="addNewPlanTitle">إضافة / تعديل خطة علاجية:</h5>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="lblRepeatCount">عدد مرات التكرار:</label>
+                                <input type="number" id="newPlanCount" placeholder="مثال: 3" class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="lblAction">الإجراء المتبع:</label>
+                                <input type="text" id="newPlanAction" placeholder="مثال: إنذار أول وتوجيه إرشادي" class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="lblParentMsg">نص الرسالة المرسلة لولي الأمر:</label>
+                            <textarea id="newPlanMessage" rows="2" placeholder="اكتب نص الرسالة..." class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm"></textarea>
+                        </div>
+                        <div class="flex items-center space-x-2 space-x-reverse pt-1">
+                            <input type="checkbox" id="newPlanDeduct" class="w-4 h-4 text-stmark-blue border-slate-300 rounded">
+                            <label for="newPlanDeduct" class="text-xs font-bold text-slate-700 cursor-pointer" data-i18n="lblDeductScore">خصم درجة من درجات السلوك عند تنفيذ هذه الخطة</label>
+                        </div>
+                        <div class="flex justify-end pt-2">
+                            <button onclick="addTreatmentPlan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition"><i class="fa-solid fa-plus ml-1"></i> <span data-i18n="btnAddPlan">حفظ الخطة العلاجية</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t">
+                <button onclick="closeSettingsModal()" class="bg-stmark-blue text-white px-6 py-2 rounded-xl text-sm font-bold" data-i18n="btnCloseSave">إغلاق وحفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Letter Modal -->
+    <div id="printLetterModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl space-y-6 my-8 print:m-0 print:p-2 print:shadow-none">
+            <div class="text-center border-b-2 border-stmark-blue pb-4">
+                <h2 class="text-2xl font-black text-stmark-blue" data-i18n="printSchoolName">كلية سان مارك</h2>
+                <h3 class="text-lg font-bold text-slate-600" data-i18n="printDeptName">القسم الإعدادي - وحدة الإشراف اليومي</h3>
+            </div>
+            <div class="text-center bg-sky-50 border border-sky-200 py-2 rounded-xl font-bold text-stmark-blue text-lg" data-i18n="printNoticeTitle">إخطار ولي الأمر بخصوص تنفيذ خطة علاجية سلوكية</div>
+            <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border text-sm">
+                <div><strong data-i18n="printStudentNameLbl">اسم الطالب:</strong> <span id="printStudentName" class="font-bold text-slate-800"></span></div>
+                <div><strong data-i18n="printGradeLbl">الصف الدراسي:</strong> <span id="printStudentGrade" class="font-bold text-slate-800"></span></div>
+                <div><strong data-i18n="printCountLbl">عدد مرات التكرار:</strong> <span id="printStudentCount" class="font-bold text-red-600"></span></div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1" data-i18n="printActionLbl">الإجراء المتبع:</label>
+                    <input type="text" id="printStudentActionInput" class="w-full bg-white border border-slate-300 rounded-lg px-2 py-1 text-sm font-bold text-stmark-gold">
+                </div>
+            </div>
+            <div id="deductNoticeBox" class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs font-bold hidden" data-i18n="printDeductNotice">
+                <i class="fa-solid fa-triangle-exclamation ml-1"></i> تنبيه: سيتم خصم درجة واحدة من درجات سلوك الطالب عند اعتماد وتنفيذ هذا الخطاب.
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1" data-i18n="printReasonsLbl">أسباب الخروج المسجلة (ضمن نطاق هذه الخطة فقط):</label>
+                <textarea id="printReasonsText" rows="3" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm font-semibold"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1" data-i18n="printMsgLbl">نص رسالة ولي الأمر:</label>
+                <textarea id="printMessageText" rows="4" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-sm"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-8 pt-8 text-center font-bold text-sm">
+                <div>
+                    <p data-i18n="printSignSupervisor">مشرف الدور</p>
+                    <div class="mt-12 border-t border-slate-400 w-3/4 mx-auto pt-1" data-i18n="printSignSig">التوقيع</div>
+                </div>
+                <div>
+                    <p data-i18n="printSignHod">رئيس القسم الإعدادي</p>
+                    <div class="mt-12 border-t border-slate-400 w-3/4 mx-auto pt-1" data-i18n="printSignStamp">الاعتماد والخاتم</div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 space-x-reverse pt-4 border-t no-print">
+                <button onclick="closePrintModal()" class="bg-slate-200 hover:bg-slate-300 px-5 py-2.5 rounded-xl font-bold text-sm" data-i18n="btnClose">إغلاق</button>
+                <button onclick="executeAndRecordPlan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow"><i class="fa-solid fa-print ml-2"></i> <span data-i18n="btnPrintAndExecute">طباعة الخطاب واعتماد الإجراء</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Details Modal -->
+    <div id="studentDetailsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-6 my-8">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-xl font-bold text-stmark-blue"><i class="fa-solid fa-user-gear ml-2"></i> السجل التاريخي والتفصيلي للطالب</h3>
+                <button onclick="closeStudentDetailsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="detailStudentHeader" class="bg-slate-50 p-4 rounded-xl border grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm items-center"></div>
+            <div class="space-y-4">
+                <h4 class="font-bold text-stmark-blue text-base border-b pb-1">سجل المخالفات وخروج الطالب:</h4>
+                <div id="detailIncidentsList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+            </div>
+            <div class="space-y-4 pt-2">
+                <h4 class="font-bold text-stmark-blue text-base border-b pb-1">الخطط العلاجية والخطابات المنفذة:</h4>
+                <div id="detailPlansList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+            </div>
+            <div class="flex justify-between items-center pt-4 border-t">
+                <button onclick="printSingleStudentReport()" class="bg-stmark-blue text-white px-5 py-2 rounded-xl text-sm font-bold shadow hover:bg-stmark-darkblue transition">
+                    <i class="fa-solid fa-print ml-1"></i> طباعة تقرير الطالب التفصيلي
+                </button>
+                <button onclick="closeStudentDetailsModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2 rounded-xl text-sm font-bold transition">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Detailed Report Print Modal -->
+    <div id="studentDetailedReportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl space-y-6 my-8 print:m-0 print:p-2 print:shadow-none print:max-w-none">
+            <div class="text-center border-b-2 border-stmark-blue pb-4">
+                <h2 class="text-2xl font-black text-stmark-blue">كلية سان مارك</h2>
+                <h3 class="text-lg font-bold text-slate-600">القسم الإعدادي - سجل الطالب التفصيلي السلوكي</h3>
+            </div>
+            <div id="reportPrintStudentInfo" class="bg-slate-50 p-4 rounded-xl border grid grid-cols-2 gap-4 text-sm"></div>
+            <div>
+                <h4 class="font-bold text-stmark-blue text-sm mb-2 border-b pb-1">سجل المخالفات وخروج الطالب:</h4>
+                <div id="reportPrintIncidentsList" class="space-y-2 text-xs"></div>
+            </div>
+            <div>
+                <h4 class="font-bold text-stmark-blue text-sm mb-2 border-b pb-1">الخطط العلاجية والإجراءات المنفذة:</h4>
+                <div id="reportPrintPlansList" class="space-y-2 text-xs"></div>
+            </div>
+            <div class="pt-8 text-center font-bold text-sm flex justify-end">
+                <div class="w-1/3">
+                    <p>رئيس القسم الإعدادي</p>
+                    <div class="mt-8 border-t border-slate-400 w-3/4 mx-auto pt-1">التوقيع والخاتم</div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 space-x-reverse pt-4 border-t no-print">
+                <button onclick="closeStudentDetailedReportModal()" class="bg-slate-200 hover:bg-slate-300 px-5 py-2.5 rounded-xl font-bold text-sm">إغلاق</button>
+                <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow"><i class="fa-solid fa-print ml-2"></i> طباعة التقرير</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archive Modal -->
+    <div id="archiveModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4 my-8">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-xl font-bold text-stmark-blue"><i class="fa-solid fa-box-archive ml-2"></i> أرشيف السنوات الدراسية السابقة</h3>
+                <button onclick="closeArchiveModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="archiveContentList" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1"></div>
+            <div class="flex justify-end pt-2 border-t">
+                <button onclick="closeArchiveModal()" class="bg-slate-200 hover:bg-slate-300 px-5 py-2.5 rounded-xl font-bold">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic (Distributed Cloud Architecture) -->
+    <script>
+        const translations = {
+            ar: {
+                headerTitle: "كلية سان مارك - القسم الإعدادي",
+                headerSubtitle: "نظام إدارة الإشراف اليومي وسلوك الطلاب",
+                btnHodSettings: "إعدادات رئيس القسم",
+                btnSaveFile: "حفظ البيانات",
+                btnImportExcel: "استيراد شيت إكسيل (Excel)",
+                tabSupervisor: "لوحة مشرفي الدور",
+                tabHod: "لوحة رئيس القسم",
+                tabHistory: "السجل التاريخي (History)",
+                supTitle: "تسجيل مخالفات وخروج الطلاب",
+                supDesc: "اختر الصف الدراسي والفصل (A, B, C, D, E) ثم حدد الطالب لتسجيل سبب الخروج والتفاصيل",
+                grade1: "الأول الإعدادي",
+                grade2: "الثاني الإعدادي",
+                grade3: "الثالث الإعدادي",
+                hodAlertsTitle: "تنبيهات خطط العلاج (رئيس القسم حصرياً)",
+                hodAlertsDesc: "الطلاب الذين وصلوا لعدد مرات تكرار تستوجب خطة علاجية وإجراء فوري (الأحدث في الأعلى)",
+                historyTitle: "السجل التاريخي للطلاب (أصحاب المخالفات فقط)",
+                historyDesc: "استعرض سجلات الخروج، درجات السلوك، والخطط العلاجية المتدرجة",
+                allGrades: "جميع الصفوف",
+                thName: "اسم الطالب",
+                thClass: "الصف / الفصل",
+                thConduct: "درجة السلوك",
+                thExits: "مرات الخروج",
+                thPlan: "آخر خطة علاجية",
+                thActions: "الإجراءات والتقرير",
+                modalIncidentTitle: "تسجيل مخالفة / خروج طالب",
+                lblSupervisor: "اسم مشرف الدور:",
+                lblPeriod: "الحصة / الفترة:",
+                lblSchool: "اسم المدرسة:",
+                lblSubject: "المادة:",
+                lblReason: "سبب الطرد / الخروج:",
+                hodLoginTitle: "دخول رئيس القسم",
+                hodLoginDesc: "أدخل كلمة المرور الخاصة برئيس القسم للوصول لتعديل الإعدادات أو إلغاء المخالفات المعتمدة",
+                lblPassword: "كلمة المرور:",
+                btnCancel: "إغلاق",
+                btnLogin: "دخول",
+                settingsTitle: "إعدادات رئيس القسم والخطط العلاجية",
+                yearSettingsTitle: "إدارة السنة الدراسية وإعادة الضبط (Reset)",
+                btnUpdateYear: "تحديث السنة",
+                resetDesc: "إعادة ضبط عام جديد (تصفير العدادات وحفظ الأرشيف):",
+                btnResetYear: "إعادة ضبط السنة (Reset)",
+                passSettingsTitle: "إعداد كلمة مرور رئيس القسم (اختياري)",
+                passSettingsDesc: "إذا تركت هذا الحقل فارغاً وحفظت، فلن يطلب البرنامج كلمة مرور في أي جزء منه.",
+                btnSavePass: "حفظ كلمة المرور",
+                plansTitle: "إعداد الخطط العلاجية (بلا حدود)",
+                plansDesc: "يتضمن كل خطة علاجية: عدد المرات + الإجراء المتبع + رسالة ولي الأمر + خيار خصم درجة السلوك",
+                addNewPlanTitle: "إضافة / تعديل خطة علاجية:",
+                lblRepeatCount: "عدد مرات التكرار:",
+                lblAction: "الإجراء المتبع:",
+                lblParentMsg: "نص الرسالة المرسلة لولي الأمر:",
+                lblDeductScore: "خصم درجة من درجات السلوك عند تنفيذ هذه الخطة",
+                btnAddPlan: "حفظ الخطة العلاجية",
+                btnCloseSave: "إغلاق وحفظ",
+                printSchoolName: "كلية سان مارك",
+                printDeptName: "القسم الإعدادي - وحدة الإشراف اليومي",
+                printNoticeTitle: "إخطار ولي الأمر بخصوص تنفيذ خطة علاجية سلوكية",
+                printStudentNameLbl: "اسم الطالب:",
+                printGradeLbl: "الصف الدراسي:",
+                printCountLbl: "عدد مرات التكرار:",
+                printActionLbl: "الإجراء المتبع:",
+                printDeductNotice: "تنبيه: سيتم خصم درجة واحدة من درجات سلوك الطالب عند اعتماد وتنفيذ هذا الخطاب.",
+                printReasonsLbl: "أسباب الخروج المسجلة:",
+                printMsgLbl: "نص رسالة ولي الأمر:",
+                printSignSupervisor: "مشرف الدور",
+                printSignSig: "التوقيع",
+                printSignHod: "رئيس القسم الإعدادي",
+                printSignStamp: "الاعتماد والخاتم",
+                btnClose: "إغلاق",
+                btnPrintAndExecute: "طباعة الخطاب واعتماد الإجراء",
+                btnExportExpelled: "إكسيل المطرودين فقط"
+            },
+            fr: {
+                headerTitle: "Collège Saint Marc - Département Préparatoire",
+                headerSubtitle: "Système de Suivi Comportemental et Surveillance Quotidienne",
+                btnHodSettings: "Paramètres du Directeur",
+                btnSaveFile: "Sauvegarder",
+                btnImportExcel: "Importer Excel",
+                tabSupervisor: "Tableau des Surveillants",
+                tabHod: "Tableau du Directeur",
+                tabHistory: "Historique (History)",
+                supTitle: "Enregistrement des Incidents et Sorties",
+                supDesc: "Sélectionnez le niveau et la classe (A, B, C, D, E) puis l'élève concerné",
+                grade1: "1ère Année Préparatoire",
+                grade2: "2ème Année Préparatoire",
+                grade3: "3ème Année Préparatoire",
+                hodAlertsTitle: "Alertes du Plan Thérapeutique (Directeur Uniquement)",
+                hodAlertsDesc: "Élèves ayant atteint le seuil nécessitant une intervention immédiate",
+                historyTitle: "Historique des Élèves (Infractions Uniquement)",
+                historyDesc: "Consulter les sorties, notes de conduite et plans thérapeutiques",
+                allGrades: "Tous les Niveaux",
+                thName: "Nom de l'élève",
+                thClass: "Classe",
+                thConduct: "Note de Conduite",
+                thExits: "Sorties",
+                thPlan: "Dernier Plan",
+                thActions: "Actions et Rapport",
+                modalIncidentTitle: "Enregistrer une Infraction",
+                lblSupervisor: "Nom du Surveillant:",
+                lblPeriod: "Période / Cours:",
+                lblSchool: "Nom de l'école:",
+                lblSubject: "Matière (Facultatif):",
+                lblReason: "Motif de Sortie:",
+                hodLoginTitle: "Connexion Directeur",
+                hodLoginDesc: "Entrez le mot de passe du directeur pour accéder aux paramètres",
+                lblPassword: "Mot de passe:",
+                btnCancel: "Fermer",
+                btnLogin: "Connexion",
+                settingsTitle: "Paramètres du Directeur et Plans Thérapeutiques",
+                yearSettingsTitle: "Gestion de l'Année Scolaire & Réinitialisation (Reset)",
+                btnUpdateYear: "Mettre à jour l'année",
+                resetDesc: "Réinitialisation pour une nouvelle année (remise à zéro et archivage):",
+                btnResetYear: "Réinitialiser (Reset)",
+                passSettingsTitle: "Mot de passe du Directeur (Facultatif)",
+                passSettingsDesc: "Si vous laissez ce champ vide, aucun mot de passe ne sera requis.",
+                btnSavePass: "Enregistrer",
+                plansTitle: "Plans Thérapeutiques (Illimité)",
+                plansDesc: "Chaque plan comprend: Nombre de fois + Action + Message aux parents",
+                addNewPlanTitle: "Ajouter / Modifier un plan:",
+                lblRepeatCount: "Nombre de répétitions:",
+                lblAction: "Action entreprise:",
+                lblParentMsg: "Message aux parents:",
+                lblDeductScore: "Déduire 1 point de conduite",
+                btnAddPlan: "Enregistrer",
+                btnCloseSave: "Fermer",
+                printSchoolName: "Collège Saint Marc",
+                printDeptName: "Département Préparatoire - Unité de Surveillance",
+                printNoticeTitle: "Avis aux Parents concernant le Plan Thérapeutique Comportemental",
+                printStudentNameLbl: "Nom de l'élève:",
+                printGradeLbl: "Niveau:",
+                printCountLbl: "Nombre de répétitions:",
+                printActionLbl: "Action:",
+                printDeductNotice: "Attention: Un point sera déduit de la note de conduite.",
+                printReasonsLbl: "Motifs enregistrés:",
+                printMsgLbl: "Message aux parents:",
+                printSignSupervisor: "Le Surveillant",
+                printSignSig: "Signature",
+                printSignHod: "Le Directeur du Département",
+                printSignStamp: "Sceau et Cachet",
+                btnClose: "Fermer",
+                btnPrintAndExecute: "Imprimer et Valider",
+                btnExportExpelled: "Excel Exclus / Sorties"
+            }
+        };
+
+        let currentLang = 'ar';
+        function toggleLanguage() {
+            currentLang = currentLang === 'ar' ? 'fr' : 'ar';
+            const htmlRoot = document.getElementById('htmlRoot');
+            htmlRoot.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+            htmlRoot.setAttribute('lang', currentLang);
+            updateUITexts();
+        }
+
+        function updateUITexts() {
+            const t = translations[currentLang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) el.innerText = t[key];
+            });
+            const langBtn = document.getElementById('langBtnText');
+            if(langBtn) langBtn.innerText = currentLang === 'ar' ? 'FR / العربية' : 'AR / Français';
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toastNotification');
+            const msgEl = document.getElementById('toastMessage');
+            const iconEl = document.getElementById('toastIcon');
+            if(!toast || !msgEl || !iconEl) return;
+            msgEl.innerText = message;
+            iconEl.className = type === 'success' ? "fa-solid fa-circle-check text-emerald-400 text-lg" : "fa-solid fa-triangle-exclamation text-amber-400 text-lg";
+            toast.classList.remove('translate-y-32', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-32', 'opacity-0'), 4000);
+        }
+
+        let confirmCallback = null;
+        function showCustomConfirm(title, message, callback, requirePassword = false) {
+            document.getElementById('confirmTitle').innerText = title;
+            document.getElementById('confirmMessage').innerText = message;
+            const passSec = document.getElementById('confirmPasswordSection');
+            if(requirePassword) { passSec.classList.remove('hidden'); document.getElementById('confirmPasswordInput').value = ''; }
+            else { passSec.classList.add('hidden'); }
+            confirmCallback = callback;
+            document.getElementById('customConfirmModal').classList.remove('hidden');
+        }
+
+        document.getElementById('confirmCancelBtn').onclick = () => { document.getElementById('customConfirmModal').classList.add('hidden'); confirmCallback = null; };
+        document.getElementById('confirmOkBtn').onclick = () => {
+            const passSec = document.getElementById('confirmPasswordSection');
+            if(!passSec.classList.contains('hidden')) {
+                if(appData.hodPassword && document.getElementById('confirmPasswordInput').value !== appData.hodPassword) {
+                    showToast("كلمة المرور غير صحيحة!", "error");
+                    return;
+                }
+            }
+            document.getElementById('customConfirmModal').classList.add('hidden');
+            if(confirmCallback) confirmCallback();
+            confirmCallback = null;
+        };
+
+        // ------------------------------------------------------------
+        // Firebase Cloud Sync (Distributed Architecture to bypass 1MB Limit)
+        // ------------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyAtuEp4rwH63cxy9gLqt3T-M0C9Bd1TQd4",
+            authDomain: "saint-marc-supervisor.firebaseapp.com",
+            projectId: "saint-marc-supervisor",
+            storageBucket: "saint-marc-supervisor.firebasestorage.app",
+            messagingSenderId: "804639349131",
+            appId: "1:804639349131:web:227a09a8926845cfcdb78e"
+        };
+
+        let firebaseDb = null;
+        let isApplyingCloudSnapshot = false;
+        let bc = null;
+
+        function normalizeAppData(data) {
+            if (!data || typeof data !== 'object') return null;
+            if (!Array.isArray(data.students)) data.students = [];
+            if (!Array.isArray(data.classes)) data.classes = ['A','B','C','D','E'];
+            if (!Array.isArray(data.supervisors)) data.supervisors = [];
+            if (!Array.isArray(data.subjects)) data.subjects = [];
+            if (!Array.isArray(data.historyArchive)) data.historyArchive = [];
+            if (!Array.isArray(data.treatmentPlans)) data.treatmentPlans = [];
+            if (!Array.isArray(data.reasons)) data.reasons = ["إزعاج داخل الفصل", "تأخير عن الحصة", "عدم إحضار الكتب", "مشاجرة مع زميل", "عدم أداء الواجب"];
+            if (!Array.isArray(data.pendingReasons)) data.pendingReasons = [];
+            if (!data.academicYear) data.academicYear = '2026-2027';
+            if (data.hodPassword === undefined) data.hodPassword = '';
+            data.students.forEach(s => {
+                if (!Array.isArray(s.incidents)) s.incidents = [];
+                if (s.conductScore === undefined || isNaN(s.conductScore)) s.conductScore = 10;
+            });
+            return data;
+        }
+
+        let appData = {
+            academicYear: "2026-2027",
+            hodPassword: "",
+            supervisors: [],
+            subjects: [],
+            classes: ["A", "B", "C", "D", "E"],
+            students: [],
+            treatmentPlans: [],
+            reasons: ["إزعاج داخل الفصل", "تأخير عن الحصة", "عدم إحضار الكتب", "مشاجرة مع زميل", "عدم أداء الواجب"],
+            pendingReasons: [],
+            historyArchive: []
+        };
+
+        function initApp() {
+            const saved = localStorage.getItem('stmark_supervisor_data');
+            if (saved) {
+                try { appData = normalizeAppData(JSON.parse(saved)) || appData; } catch(e) {}
+            }
+            appData = normalizeAppData(appData);
+            const badge = document.getElementById('currentYearBadge');
+            if(badge) badge.innerText = "السنة الدراسية: " + appData.academicYear;
+            populateSupervisorsSelect();
+            populateSubjectsSelect();
+            populateReasonsList();
+            updateClassList();
+            renderHodAlerts();
+            renderHistoryTable();
+            updateUITexts();
+        }
+
+        let pushTimer = null;
+        function persistData() {
+            appData = normalizeAppData(appData);
+            localStorage.setItem('stmark_supervisor_data', JSON.stringify(appData));
+            const badge = document.getElementById('currentYearBadge');
+            if(badge) badge.innerText = "السنة الدراسية: " + appData.academicYear;
+            renderHodAlerts();
+            renderHistoryTable();
+            renderStudentsGrid();
+            
+            if(bc) bc.postMessage({ type: 'DATA_UPDATED', payload: appData });
+            
+            clearTimeout(pushTimer);
+            pushTimer = setTimeout(pushToCloudDistributed, 400);
+        }
+
+        function renderWithoutBroadcasting() {
+            const badge = document.getElementById('currentYearBadge');
+            if(badge) badge.innerText = "السنة الدراسية: " + appData.academicYear;
+            const supEl = document.getElementById('incSupervisor');
+            const prevSup = supEl ? supEl.value : '';
+            populateSupervisorsSelect();
+            if (supEl && prevSup && Array.from(supEl.options).some(o => o.value === prevSup)) supEl.value = prevSup;
+            populateReasonsList();
+            updateClassList();
+            renderHodAlerts();
+            renderHistoryTable();
+            renderStudentsGrid();
+        }
+
+        async function pushToCloudDistributed() {
+            if (!firebaseDb || isApplyingCloudSnapshot || !navigator.onLine) return;
+            try {
+                const metaDoc = {
+                    academicYear: appData.academicYear,
+                    hodPassword: appData.hodPassword,
+                    supervisors: appData.supervisors,
+                    subjects: appData.subjects,
+                    classes: appData.classes,
+                    treatmentPlans: appData.treatmentPlans,
+                    reasons: appData.reasons,
+                    pendingReasons: appData.pendingReasons,
+                    historyArchive: appData.historyArchive,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                await firebaseDb.collection('appMeta').doc('config').set(metaDoc);
+
+                const batch = firebaseDb.batch();
+                appData.students.forEach(student => {
+                    const studentRef = firebaseDb.collection('students').doc(String(student.id));
+                    batch.set(studentRef, student);
+                });
+                await batch.commit();
+            } catch (err) {
+                console.error("Cloud sync error:", err);
+            }
+        }
+
+        let firebaseLoadTries = 0;
+        function startFirebaseSync() {
+            if (!window.firebase && firebaseLoadTries < 20) {
+                firebaseLoadTries++;
+                setTimeout(startFirebaseSync, 700);
+                return;
+            }
+            try {
+                if (!window.firebase) return;
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                firebaseDb = firebase.firestore();
+
+                firebaseDb.collection('appMeta').doc('config').onSnapshot(doc => {
+                    if (!doc.exists || isApplyingCloudSnapshot) return;
+                    const d = doc.data();
+                    isApplyingCloudSnapshot = true;
+                    if (d.academicYear) appData.academicYear = d.academicYear;
+                    if (d.hodPassword !== undefined) appData.hodPassword = d.hodPassword;
+                    if (d.supervisors) appData.supervisors = d.supervisors;
+                    if (d.subjects) appData.subjects = d.subjects;
+                    if (d.classes) appData.classes = d.classes;
+                    if (d.treatmentPlans) appData.treatmentPlans = d.treatmentPlans;
+                    if (d.reasons) appData.reasons = d.reasons;
+                    if (d.pendingReasons) appData.pendingReasons = d.pendingReasons;
+                    if (d.historyArchive) appData.historyArchive = d.historyArchive;
+                    localStorage.setItem('stmark_supervisor_data', JSON.stringify(appData));
+                    renderWithoutBroadcasting();
+                    isApplyingCloudSnapshot = false;
+                });
+
+                firebaseDb.collection('students').onSnapshot(snapshot => {
+                    if (isApplyingCloudSnapshot) return;
+                    let changed = false;
+                    snapshot.docChanges().forEach(change => {
+                        const sData = change.doc.data();
+                        const idx = appData.students.findIndex(s => String(s.id) === String(sData.id));
+                        if (change.type === "added" || change.type === "modified") {
+                            if (idx === -1) {
+                                appData.students.push(sData);
+                            } else {
+                                appData.students[idx] = sData;
+                            }
+                            changed = true;
+                        }
+                        if (change.type === "removed") {
+                            if (idx !== -1) {
+                                appData.students.splice(idx, 1);
+                                changed = true;
+                            }
+                        }
+                    });
+                    if (changed) {
+                        isApplyingCloudSnapshot = true;
+                        localStorage.setItem('stmark_supervisor_data', JSON.stringify(appData));
+                        renderWithoutBroadcasting();
+                        isApplyingCloudSnapshot = false;
+                    }
+                });
+            } catch (err) {
+                console.error("Firebase init error:", err);
+            }
+        }
+
+        try {
+            bc = new BroadcastChannel('stmark_supervisor_channel');
+            bc.onmessage = function (event) {
+                if (event.data && event.data.type === 'DATA_UPDATED') {
+                    appData = normalizeAppData(event.data.payload) || appData;
+                    renderWithoutBroadcasting();
+                }
+            };
+        } catch(e) {}
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-stmark-blue', 'text-white');
+                el.classList.add('bg-white', 'text-slate-700');
+            });
+            const tabEl = document.getElementById('tab-' + tabId);
+            if(tabEl) tabEl.classList.remove('hidden');
+            const activeBtn = document.getElementById('tabBtn-' + tabId);
+            if(activeBtn) {
+                activeBtn.classList.remove('bg-white', 'text-slate-700');
+                activeBtn.classList.add('bg-stmark-blue', 'text-white');
+            }
+        }
+
+        function updateClassList() {
+            const classSelect = document.getElementById('selClass');
+            if(!classSelect) return;
+            const prevClass = classSelect.value;
+            classSelect.innerHTML = '';
+            const classes = appData.classes || ["A", "B", "C", "D", "E"];
+            classes.forEach(cls => {
+                const opt = document.createElement('option');
+                opt.value = cls;
+                opt.innerText = "فصل " + cls;
+                classSelect.appendChild(opt);
+            });
+            if (prevClass && classes.includes(prevClass)) classSelect.value = prevClass;
+            renderStudentsGrid();
+        }
+
+        function populateSupervisorsSelect() {
+            const supSelect = document.getElementById('incSupervisor');
+            if(!supSelect) return;
+            supSelect.innerHTML = '';
+            if (appData.supervisors.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.innerText = "لم يتم إضافة مشرفين في الإعدادات بعد";
+                supSelect.appendChild(opt);
+                return;
+            }
+            appData.supervisors.forEach(sup => {
+                const opt = document.createElement('option');
+                opt.value = sup;
+                opt.innerText = sup;
+                supSelect.appendChild(opt);
+            });
+        }
+
+        function populateSubjectsSelect() {
+            const select = document.getElementById('incSubject');
+            if (!select) return;
+            select.innerHTML = '';
+            const blank = document.createElement('option');
+            blank.value = '';
+            blank.textContent = 'بدون تحديد';
+            select.appendChild(blank);
+            (appData.subjects || []).forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+        }
+
+        function toggleCustomSubject() {
+            const select = document.getElementById('incSubject');
+            const input = document.getElementById('incSubjectCustom');
+            const btn = document.getElementById('toggleSubjectBtn');
+            if (input && !input.classList.contains('hidden')) {
+                input.classList.add('hidden');
+                select.classList.remove('hidden');
+                btn.textContent = 'مادة أخرى';
+            } else {
+                select.classList.add('hidden');
+                input.classList.remove('hidden');
+                input.focus();
+                btn.textContent = 'اختيار من القائمة';
+            }
+        }
+
+        function populateReasonsList() {
+            const datalist = document.getElementById('reasonsList');
+            if(!datalist) return;
+            datalist.innerHTML = '';
+            (appData.reasons || []).forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r;
+                datalist.appendChild(opt);
+            });
+        }
+
+        let isCustomSupervisor = false;
+        function toggleCustomSupervisor() {
+            isCustomSupervisor = !isCustomSupervisor;
+            const selectEl = document.getElementById('incSupervisor');
+            const customEl = document.getElementById('incSupervisorCustom');
+            const btnEl = document.getElementById('toggleSupBtn');
+            if (isCustomSupervisor) {
+                selectEl.classList.add('hidden');
+                customEl.classList.remove('hidden');
+                customEl.value = '';
+                btnEl.innerText = 'القائمة';
+            } else {
+                selectEl.classList.remove('hidden');
+                customEl.classList.add('hidden');
+                btnEl.innerText = 'مدرس آخر';
+            }
+        }
+
+        function renderStudentsGrid() {
+            const gradeEl = document.getElementById('selGrade');
+            const classEl = document.getElementById('selClass');
+            const grid = document.getElementById('studentsGrid');
+            if(!gradeEl || !classEl || !grid) return;
+            const grade = gradeEl.value;
+            const cls = classEl.value;
+            grid.innerHTML = '';
+            const filteredStudents = appData.students.filter(s => s.grade === grade && s.class === cls);
+            if (filteredStudents.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400 font-semibold">لا توجد طلاب مسجلة في هذا الفصل (${cls} - ${grade}) حالياً.</div>`;
+                return;
+            }
+            filteredStudents.forEach(student => {
+                if (student.conductScore === undefined || isNaN(student.conductScore)) student.conductScore = 10;
+                const card = document.createElement('div');
+                card.className = "bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between cursor-pointer group";
+                card.onclick = () => openIncidentModal(student.id);
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="bg-sky-50 text-stmark-blue text-xs font-bold px-2 py-1 rounded-lg">فصل ${student.class}</span>
+                            <span class="text-xs font-bold text-slate-500">السلوك: <strong class="text-emerald-600">${student.conductScore}/10</strong></span>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-base mb-1 group-hover:text-stmark-blue transition">${student.name}</h4>
+                        <p class="text-xs text-slate-500">مرات الخروج: <strong class="text-red-600">${student.incidents.length}</strong></p>
+                    </div>
+                    <div class="mt-4 pt-2 border-t flex flex-col gap-1 text-xs font-bold">
+                        <div class="flex justify-between items-center text-stmark-accent py-1">
+                            <span>تسجيل مخالفة</span>
+                            <i class="fa-solid fa-plus-circle text-base"></i>
+                        </div>
+                        <div onclick="event.stopPropagation(); promptCancelStudentIncident('${student.id}')" class="flex justify-between items-center text-red-600 hover:text-red-800 py-1 border-t border-slate-100">
+                            <span>إلغاء مخالفة</span>
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        let activeCancelStudentId = null;
+        function promptCancelStudentIncident(studentId) {
+            const requirePass = Boolean(appData.hodPassword && appData.hodPassword.trim() !== "");
+            showCustomConfirm("تأكيد صلاحية رئيس القسم", "يرجى إدخال كلمة مرور رئيس القسم لعرض وإلغاء مخالفات الطالب:", () => {
+                openCancelIncidentModal(studentId);
+            }, requirePass);
+        }
+
+        function openCancelIncidentModal(studentId) {
+            activeCancelStudentId = studentId;
+            const student = appData.students.find(s => s.id === studentId);
+            if (!student) return;
+            document.getElementById('cancelIncidentStudentInfo').innerText = `الطالب: ${student.name} (${student.grade} - فصل ${student.class}) | إجمالي المخالفات: ${student.incidents.length}`;
+            const container = document.getElementById('cancelIncidentListContainer');
+            container.innerHTML = '';
+            if (!student.incidents || student.incidents.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-slate-400 font-semibold">لا توجد مخالفات مسجلة لهذا الطالب حالياً.</div>`;
+            } else {
+                student.incidents.slice().reverse().forEach((inc, revIndex) => {
+                    const actualIndex = student.incidents.length - 1 - revIndex;
+                    const div = document.createElement('div');
+                    div.className = "bg-slate-50 p-3 rounded-xl border flex flex-wrap justify-between items-center gap-3 text-xs";
+                    div.innerHTML = `
+                        <div>
+                            <span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded ml-2">مخالفة #${actualIndex + 1}</span>
+                            <strong class="text-slate-800 text-sm">${inc.reason}</strong> [الحصة: ${inc.period}] - المشرف: ${inc.supervisor} (${inc.date} - ${inc.time})
+                        </div>
+                        <button onclick="confirmDeleteIncident(${actualIndex})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-bold transition shadow">
+                            <i class="fa-solid fa-trash-can ml-1"></i> إلغاء هذه المخالفة
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('cancelIncidentModal').classList.remove('hidden');
+        }
+
+        function closeCancelIncidentModal() {
+            document.getElementById('cancelIncidentModal').classList.add('hidden');
+            activeCancelStudentId = null;
+        }
+
+        function confirmDeleteIncident(incidentIndex) {
+            showCustomConfirm("تأكيد حذف المخالفة", "هل أنت متأكد من إلغاء وحذف هذه المخالفة نهائياً من سجل الطالب؟", async () => {
+                const student = appData.students.find(s => s.id === activeCancelStudentId);
+                if (student && student.incidents[incidentIndex]) {
+                    student.incidents.splice(incidentIndex, 1);
+                    persistData();
+                    if (firebaseDb) {
+                        await firebaseDb.collection('students').doc(String(student.id)).set(student);
+                    }
+                    renderStudentsGrid();
+                    renderHistoryTable();
+                    renderHodAlerts();
+                    showToast("تم إلغاء المخالفة بنجاح!");
+                    openCancelIncidentModal(activeCancelStudentId);
+                }
+            });
+        }
+
+        function promptAddStudent() {
+            const requirePass = Boolean(appData.hodPassword && appData.hodPassword.trim() !== "");
+            showCustomConfirm("تأكيد صلاحية رئيس القسم", "يرجى إدخال كلمة مرور رئيس القسم لإضافة طالب جديد:", () => {
+                openManualAddStudentModal();
+            }, requirePass);
+        }
+
+        function openManualAddStudentModal() {
+            const classSelect = document.getElementById('manualAddClass');
+            classSelect.innerHTML = '';
+            (appData.classes || ["A", "B", "C", "D", "E"]).forEach(cls => {
+                const opt = document.createElement('option');
+                opt.value = cls;
+                opt.innerText = "فصل " + cls;
+                classSelect.appendChild(opt);
+            });
+            document.getElementById('manualAddName').value = '';
+            document.getElementById('manualAddStudentModal').classList.remove('hidden');
+        }
+
+        function closeManualAddStudentModal() {
+            document.getElementById('manualAddStudentModal').classList.add('hidden');
+        }
+
+        function submitManualAddStudent() {
+            const grade = document.getElementById('manualAddGrade').value;
+            const cls = document.getElementById('manualAddClass').value;
+            const name = document.getElementById('manualAddName').value.trim();
+            if (!name || name.length < 2) { showToast("يرجى إدخال اسم صحيح للطالب.", "error"); return; }
+            const newStudentId = 'manual_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+            const newStudent = {
+                id: newStudentId,
+                studentNumber: '',
+                name: name,
+                grade: grade,
+                class: cls,
+                academicYear: appData.academicYear || '',
+                term: '',
+                conductScore: 10,
+                incidents: [],
+                executedPlans: [],
+                planHistory: []
+            };
+            appData.students.push(newStudent);
+            persistData();
+            if (firebaseDb) {
+                firebaseDb.collection('students').doc(String(newStudentId)).set(newStudent);
+            }
+            updateClassList();
+            renderHistoryTable();
+            closeManualAddStudentModal();
+            showToast(`تمت إضافة الطالب "${name}" بنجاح!`);
+        }
+
+        function promptRemoveStudent() {
+            const requirePass = Boolean(appData.hodPassword && appData.hodPassword.trim() !== "");
+            showCustomConfirm("تأكيد صلاحية رئيس القسم", "يرجى إدخال كلمة مرور رئيس القسم لحذف طالب:", () => {
+                openManualRemoveStudentModal();
+            }, requirePass);
+        }
+
+        function openManualRemoveStudentModal() {
+            populateManualRemClasses();
+            document.getElementById('manualRemoveStudentModal').classList.remove('hidden');
+        }
+
+        function closeManualRemoveStudentModal() {
+            document.getElementById('manualRemoveStudentModal').classList.add('hidden');
+        }
+
+        function populateManualRemClasses() {
+            const grade = document.getElementById('manualRemGrade').value;
+            const classSelect = document.getElementById('manualRemClass');
+            classSelect.innerHTML = '';
+            const availableClasses = Array.from(new Set(appData.students.filter(s => s.grade === grade).map(s => s.class)));
+            if (availableClasses.length === 0) appData.classes.forEach(c => availableClasses.push(c));
+            availableClasses.forEach(cls => {
+                const opt = document.createElement('option');
+                opt.value = cls;
+                opt.innerText = "فصل " + cls;
+                classSelect.appendChild(opt);
+            });
+            populateManualRemStudents();
+        }
+
+        function populateManualRemStudents() {
+            const grade = document.getElementById('manualRemGrade').value;
+            const cls = document.getElementById('manualRemClass').value;
+            const studentSelect = document.getElementById('manualRemStudentId');
+            studentSelect.innerHTML = '';
+            const filtered = appData.students.filter(s => s.grade === grade && s.class === cls);
+            filtered.forEach(student => {
+                const opt = document.createElement('option');
+                opt.value = student.id;
+                opt.innerText = `${student.name} (السلوك: ${student.conductScore}/10)`;
+                studentSelect.appendChild(opt);
+            });
+        }
+
+        function submitManualRemoveStudent() {
+            const studentId = document.getElementById('manualRemStudentId').value;
+            if (!studentId) { showToast("يرجى اختيار طالب للحذف.", "error"); return; }
+            const index = appData.students.findIndex(s => s.id === studentId);
+            if (index !== -1) {
+                const removedName = appData.students[index].name;
+                appData.students.splice(index, 1);
+                persistData();
+                if (firebaseDb) {
+                    firebaseDb.collection('students').doc(String(studentId)).delete();
+                }
+                updateClassList();
+                renderHistoryTable();
+                closeManualRemoveStudentModal();
+                showToast(`تم حذف الطالب "${removedName}" بنجاح!`);
+            }
+        }
+
+        function promptRemoveAllStudents() {
+            const requirePass = Boolean(appData.hodPassword && appData.hodPassword.trim() !== "");
+            showCustomConfirm("تحذير خطير - حذف جميع الطلاب", "هل أنت متأكد تماماً من رغبتك في حذف جميع الطلاب المسجلين في النظام نهائياً؟", async () => {
+                appData.students = [];
+                persistData();
+                if (firebaseDb) {
+                    const snap = await firebaseDb.collection('students').get();
+                    const batch = firebaseDb.batch();
+                    snap.docs.forEach(d => batch.delete(d.ref));
+                    await batch.commit();
+                }
+                updateClassList();
+                renderHistoryTable();
+                renderHodAlerts();
+                showToast("تم حذف جميع الطلاب بنجاح!");
+            }, requirePass);
+        }
+
+        function resetExtraClasses() {
+            showCustomConfirm("إزالة الاختيارات السابقة", "هل أنت متأكد من إزالة جميع الفصول الزائدة وإرجاع الفصول الأساسية فقط (A, B, C, D, E)؟", () => {
+                appData.classes = ["A", "B", "C", "D", "E"];
+                persistData();
+                updateClassList();
+                showToast("تم إزالة الاختيارات السابقة بنجاح!");
+            });
+        }
+
+        let activeStudentIdForIncident = null;
+        function openIncidentModal(studentId) {
+            const subjectSelect = document.getElementById('incSubject');
+            const subjectCustom = document.getElementById('incSubjectCustom');
+            const subjectBtn = document.getElementById('toggleSubjectBtn');
+            if (subjectSelect) subjectSelect.classList.remove('hidden');
+            if (subjectCustom) { subjectCustom.classList.add('hidden'); subjectCustom.value = ''; }
+            if (subjectBtn) subjectBtn.textContent = 'مادة أخرى';
+            activeStudentIdForIncident = studentId;
+            const student = appData.students.find(s => s.id === studentId);
+            if(!student) return;
+            document.getElementById('incidentStudentInfo').innerText = `الطالب: ${student.name} (${student.grade} - فصل ${student.class})`;
+            document.getElementById('incReason').value = '';
+            document.getElementById('incSubject').value = '';
+            if (isCustomSupervisor) toggleCustomSupervisor();
+            document.getElementById('incidentModal').classList.remove('hidden');
+        }
+
+        function closeIncidentModal() {
+            document.getElementById('incidentModal').classList.add('hidden');
+            activeStudentIdForIncident = null;
+        }
+
+        function submitIncident() {
+            let supervisor = isCustomSupervisor ? document.getElementById('incSupervisorCustom').value.trim() : document.getElementById('incSupervisor').value.trim();
+            const period = document.getElementById('incPeriod').value.trim();
+            const school = document.getElementById('incSchool').value.trim();
+            let subject = !document.getElementById('incSubject').classList.contains('hidden') ? document.getElementById('incSubject').value.trim() : document.getElementById('incSubjectCustom').value.trim();
+            const reason = document.getElementById('incReason').value.trim();
+
+            if (!supervisor || !period || !school || !subject || !reason) {
+                showToast('يرجى استكمال كافة بيانات المخالفة.', 'error');
+                return;
+            }
+
+            if (reason && !appData.reasons.includes(reason) && !appData.pendingReasons.includes(reason)) {
+                if (!appData.pendingReasons) appData.pendingReasons = [];
+                appData.pendingReasons.push(reason);
+            }
+
+            const student = appData.students.find(s => s.id === activeStudentIdForIncident);
+            if (student) {
+                student.incidents.push({
+                    date: new Date().toLocaleDateString('ar-EG'),
+                    time: new Date().toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'}),
+                    supervisor, period, school, subject, reason
+                });
+                persistData();
+                if (firebaseDb) {
+                    firebaseDb.collection('students').doc(String(student.id)).set(student);
+                }
+                renderStudentsGrid();
+                closeIncidentModal();
+                showToast("تم تسجيل المخالفة بنجاح!");
+            }
+        }
+
+        function renderHodAlerts() {
+            const container = document.getElementById('hodAlertsContainer');
+            if(!container) return;
+            container.innerHTML = '';
+            let alertCount = 0;
+            let alertItems = [];
+            appData.students.forEach(student => {
+                const count = student.incidents.length;
+                appData.treatmentPlans.forEach(plan => {
+                    if (count >= plan.count) {
+                        const alreadyExecuted = student.executedPlans && student.executedPlans.includes(plan.count);
+                        if (!alreadyExecuted) {
+                            alertCount++;
+                            alertItems.push({ student, count, plan });
+                        }
+                    }
+                });
+            });
+
+            if (alertItems.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400 font-semibold">لا توجد تنبيهات علاجية جديدة معلقة حالياً.</div>`;
+            } else {
+                alertItems.reverse().forEach(({ student, count, plan }) => {
+                    const alertCard = document.createElement('div');
+                    alertCard.className = "bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-wrap justify-between items-center gap-4 shadow-sm";
+                    alertCard.innerHTML = `
+                        <div>
+                            <div class="flex items-center space-x-2 space-x-reverse mb-1">
+                                <span class="bg-red-600 text-white text-xs px-2.5 py-0.5 rounded-full font-bold">تنبيه خطة علاجية (${plan.count} مرات)</span>
+                                <h4 class="font-bold text-slate-800 text-base">${student.name} (${student.grade} - ${student.class})</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">وصل الطالب إلى <strong>${count}</strong> مرات خروج. الإجراء: <span class="font-bold text-stmark-blue">${plan.action}</span></p>
+                        </div>
+                        <div>
+                            <button onclick="openPrintModal('${student.id}', ${plan.count}, '${plan.action.replace(/'/g, "\'")}', '${plan.message.replace(/'/g, "\'")}', ${plan.deductScore})" class="bg-stmark-blue hover:bg-stmark-darkblue text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition">
+                                <i class="fa-solid fa-file-lines ml-1"></i> تنفيذ وطباعة الخطاب
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(alertCard);
+                });
+            }
+            const badge = document.getElementById('hodAlertCount');
+            if(badge) {
+                if (alertCount > 0) { badge.innerText = alertCount; badge.classList.remove('hidden'); }
+                else { badge.classList.add('hidden'); }
+            }
+        }
+
+        function promptHodLogin() {
+            if (!appData.hodPassword || appData.hodPassword.trim() === "") openSettingsModal();
+            else { document.getElementById('hodPasswordInput').value = ''; document.getElementById('hodLoginModal').classList.remove('hidden'); }
+        }
+
+        function closeHodLoginModal() { document.getElementById('hodLoginModal').classList.add('hidden'); }
+        function verifyHodLogin() {
+            if (document.getElementById('hodPasswordInput').value === appData.hodPassword) {
+                closeHodLoginModal(); openSettingsModal();
+            } else { showToast("كلمة المرور غير صحيحة!", "error"); }
+        }
+
+        let activePrintStudentId = null, activePrintPlanCount = null, activePrintDeductScore = false;
+        function openPrintModal(studentId, count, actionTitle, defaultMessage, deductScore) {
+            activePrintStudentId = studentId;
+            activePrintPlanCount = count;
+            activePrintDeductScore = deductScore;
+            const student = appData.students.find(s => s.id === studentId);
+            if(!student) return;
+            document.getElementById('printStudentName').innerText = student.name;
+            document.getElementById('printStudentGrade').innerText = `${student.grade} (فصل ${student.class})`;
+            document.getElementById('printStudentCount').innerText = count + " مرات";
+            document.getElementById('printStudentActionInput').value = actionTitle;
+            const deductBox = document.getElementById('deductNoticeBox');
+            if(deductBox) { if (deductScore) deductBox.classList.remove('hidden'); else deductBox.classList.add('hidden'); }
+            const sortedPlans = [...appData.treatmentPlans].sort((a,b) => a.count - b.count);
+            const planIdx = sortedPlans.findIndex(p => p.count === count);
+            let prevCount = planIdx > 0 ? sortedPlans[planIdx - 1].count : 0;
+            const relevantIncidents = student.incidents.slice(prevCount, count);
+            document.getElementById('printReasonsText').value = relevantIncidents.map((inc, i) => `${prevCount + i + 1}. ${inc.reason} [${inc.period}] (${inc.date})`).join("\n");
+            document.getElementById('printMessageText').value = defaultMessage;
+            document.getElementById('printLetterModal').classList.remove('hidden');
+        }
+
+        function closePrintModal() { document.getElementById('printLetterModal').classList.add('hidden'); }
+        function executeAndRecordPlan() {
+            const student = appData.students.find(s => s.id === activePrintStudentId);
+            const customAction = document.getElementById('printStudentActionInput').value.trim();
+            const customReasons = document.getElementById('printReasonsText').value;
+            if (student) {
+                if (!student.executedPlans) student.executedPlans = [];
+                if (!student.executedPlans.includes(activePrintPlanCount)) student.executedPlans.push(activePrintPlanCount);
+                if (activePrintDeductScore && student.conductScore > 0) student.conductScore -= 1;
+                if (!student.planHistory) student.planHistory = [];
+                student.planHistory.push({
+                    date: new Date().toLocaleDateString('ar-EG'),
+                    count: activePrintPlanCount,
+                    action: customAction,
+                    reasonsSummary: customReasons,
+                    deducted: activePrintDeductScore
+                });
+                persistData();
+                if (firebaseDb) firebaseDb.collection('students').doc(String(student.id)).set(student);
+                window.print();
+                closePrintModal();
+                showToast("تم اعتماد الخطاب وتحديث درجات السلوك بنجاح!");
+            }
+        }
+
+        function exportConductExcel() {
+            const gradeFilter = document.getElementById('exportGradeSelect').value;
+            const classFilter = document.getElementById('exportClassSelect').value;
+            let filtered = appData.students;
+            if (gradeFilter) filtered = filtered.filter(s => s.grade === gradeFilter);
+            if (classFilter) filtered = filtered.filter(s => s.class === classFilter);
+            const data = []; let index = 1;
+            filtered.forEach(student => {
+                data.push({ "رقم المسلسل": index++, "اسم الطالب": student.name, "الصف الدراسي": student.grade, "الفصل": student.class, "درجة السلوك": student.conductScore });
+            });
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "درجات السلوك");
+            XLSX.writeFile(workbook, `StMark_Conduct_${gradeFilter || 'All'}.xlsx`);
+            showToast("تم التصدير بنجاح!");
+        }
+
+        function exportDetailedExcel() {
+            const gradeFilter = document.getElementById('exportGradeSelect').value;
+            const classFilter = document.getElementById('exportClassSelect').value;
+            let filtered = appData.students;
+            if (gradeFilter) filtered = filtered.filter(s => s.grade === gradeFilter);
+            if (classFilter) filtered = filtered.filter(s => s.class === classFilter);
+            const data = []; let index = 1;
+            filtered.forEach(student => {
+                const lastPlan = student.planHistory && student.planHistory.length > 0 ? student.planHistory[student.planHistory.length - 1].action : 'لا توجد خطة';
+                data.push({ "رقم المسلسل": index++, "اسم الطالب": student.name, "الصف الدراسي": student.grade, "الفصل": student.class, "درجة السلوك": student.conductScore, "إجمالي المخالفات": student.incidents.length, "آخر خطة": lastPlan });
+            });
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "التاريخ التفصيلي");
+            XLSX.writeFile(workbook, `StMark_Detailed_${gradeFilter || 'All'}.xlsx`);
+            showToast("تم التصدير بنجاح!");
+        }
+
+        function exportExpelledExcel() {
+            const gradeFilter = document.getElementById('exportGradeSelect').value;
+            const classFilter = document.getElementById('exportClassSelect').value;
+            let filtered = appData.students.filter(s => s.incidents && s.incidents.length > 0);
+            if (gradeFilter) filtered = filtered.filter(s => s.grade === gradeFilter);
+            if (classFilter) filtered = filtered.filter(s => s.class === classFilter);
+            const data = []; let index = 1;
+            filtered.forEach(student => {
+                student.incidents.forEach(inc => {
+                    data.push({ "رقم المسلسل": index++, "اسم الطالب": student.name, "الصف الدراسي": student.grade, "الفصل": student.class, "تاريخ": inc.date, "الحصة": inc.period, "السبب": inc.reason, "المشرف": inc.supervisor });
+                });
+            });
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "المطرودين");
+            XLSX.writeFile(workbook, `StMark_Expelled_${gradeFilter || 'All'}.xlsx`);
+            showToast("تم التصدير بنجاح!");
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById('historyTableBody');
+            const gradeFilter = document.getElementById('historyFilterGrade').value;
+            const searchQuery = document.getElementById('historySearchInput').value.trim().toLowerCase();
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            const filtered = appData.students.filter(s => {
+                if (!s.incidents || s.incidents.length === 0) return false;
+                if (gradeFilter && s.grade !== gradeFilter) return false;
+                if (searchQuery && !s.name.toLowerCase().includes(searchQuery)) return false;
+                return true;
+            });
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 font-semibold">لا توجد سجلات مطابقة.</td></tr>`;
+                return;
+            }
+            filtered.forEach(student => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                const lastPlan = student.planHistory && student.planHistory.length > 0 ? student.planHistory[student.planHistory.length - 1].action : 'لا توجد خطة مفعلة';
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-800">${student.name}</td>
+                    <td class="p-3 text-slate-600">${student.grade} - فصل ${student.class}</td>
+                    <td class="p-3 font-bold text-emerald-600">${student.conductScore}/10</td>
+                    <td class="p-3 font-bold text-red-600">${student.incidents.length}</td>
+                    <td class="p-3 text-slate-600">${lastPlan}</td>
+                    <td class="p-3 text-center flex justify-center gap-2 items-center">
+                        <button onclick="viewStudentDetails('${student.id}')" class="bg-sky-100 text-stmark-blue hover:bg-sky-200 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center">
+                            <i class="fa-solid fa-eye ml-1"></i> التفاصيل
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        let activeDetailStudentId = null;
+        function viewStudentDetails(studentId) {
+            activeDetailStudentId = studentId;
+            const student = appData.students.find(s => s.id === studentId);
+            if(!student) return;
+            document.getElementById('detailStudentHeader').innerHTML = `
+                <div><strong>اسم الطالب:</strong> <span class="text-stmark-blue font-bold">${student.name}</span></div>
+                <div><strong>الصف والفصل:</strong> ${student.grade} - فصل ${student.class}</div>
+                <div class="flex items-center gap-2">
+                    <strong>درجة السلوك:</strong> <span class="text-emerald-600 font-bold text-base">${student.conductScore}/10</span>
+                    <button onclick="adjustConductScore('${student.id}', 1)" class="bg-emerald-100 text-emerald-700 w-7 h-7 rounded-lg font-bold text-xs"><i class="fa-solid fa-plus"></i></button>
+                    <button onclick="adjustConductScore('${student.id}', -1)" class="bg-red-100 text-red-700 w-7 h-7 rounded-lg font-bold text-xs"><i class="fa-solid fa-minus"></i></button>
+                </div>
+            `;
+            const incidentsListEl = document.getElementById('detailIncidentsList');
+            incidentsListEl.innerHTML = '';
+            student.incidents.slice().reverse().forEach((inc, i) => {
+                const div = document.createElement('div');
+                div.className = "bg-slate-50 p-3 rounded-xl border text-xs flex justify-between items-center";
+                div.innerHTML = `<div><strong class="text-red-600 ml-2">#${student.incidents.length - i}</strong> <strong>${inc.reason}</strong> [حصة: ${inc.period}]</div><span class="text-slate-500">${inc.date}</span>`;
+                incidentsListEl.appendChild(div);
+            });
+            const plansListEl = document.getElementById('detailPlansList');
+            plansListEl.innerHTML = '';
+            (student.planHistory || []).forEach(ph => {
+                const div = document.createElement('div');
+                div.className = "bg-emerald-50 p-3 rounded-xl border border-emerald-200 text-xs space-y-1";
+                div.innerHTML = `<div class="flex justify-between font-bold text-emerald-800"><span>تكرار (${ph.count}): ${ph.action}</span><span>${ph.date}</span></div>`;
+                plansListEl.appendChild(div);
+            });
+            document.getElementById('studentDetailsModal').classList.remove('hidden');
+        }
+
+        function closeStudentDetailsModal() { document.getElementById('studentDetailsModal').classList.add('hidden'); }
+        function adjustConductScore(studentId, amount) {
+            const requirePass = Boolean(appData.hodPassword && appData.hodPassword.trim() !== "");
+            showCustomConfirm("صلاحيات رئيس القسم", "يرجى إدخال كلمة مرور رئيس القسم لتعديل درجة السلوك:", async () => {
+                const student = appData.students.find(s => s.id === studentId);
+                if (student) {
+                    student.conductScore = Math.max(0, Math.min(10, student.conductScore + amount));
+                    persistData();
+                    if (firebaseDb) firebaseDb.collection('students').doc(String(student.id)).set(student);
+                    viewStudentDetails(studentId);
+                    renderHistoryTable();
+                    renderStudentsGrid();
+                    showToast("تم تحديث درجة السلوك بنجاح!");
+                }
+            }, requirePass);
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settingCurrentYear').value = appData.academicYear;
+            document.getElementById('settingHodPass').value = appData.hodPassword || '';
+            renderPendingReasonsConfigList();
+            renderSupervisorsConfigList();
+            renderSubjectsConfigList();
+            renderReasonsConfigList();
+            renderTreatmentPlansConfig();
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
+        function saveYearSetting() {
+            const yr = document.getElementById('settingCurrentYear').value.trim();
+            if (yr) { appData.academicYear = yr; persistData(); showToast("تم تحديث السنة بنجاح!"); }
+        }
+        function saveHodPassword() {
+            appData.hodPassword = document.getElementById('settingHodPass').value.trim();
+            persistData();
+            showToast("تم حفظ كلمة المرور بنجاح!");
+        }
+
+        // تم تحديث الدالة لتصدير الإعدادات مباشرة وبشكل فوري دون تعقيد أو توقف
+        function exportSettingsOnly() {
+            const settings = {
+                academicYear: appData.academicYear,
+                hodPassword: appData.hodPassword,
+                supervisors: appData.supervisors,
+                subjects: appData.subjects,
+                classes: appData.classes,
+                treatmentPlans: appData.treatmentPlans,
+                reasons: appData.reasons,
+                pendingReasons: appData.pendingReasons
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `StMark_Settings_${appData.academicYear}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            showToast("تم تصدير ملف الإعدادات بنجاح!");
+        }
+
+        function importSettingsOnly(event) {
+            const input = event?.target;
+            const file = input?.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported && typeof imported === 'object') {
+                        if (imported.academicYear !== undefined) appData.academicYear = imported.academicYear;
+                        if (imported.hodPassword !== undefined) appData.hodPassword = imported.hodPassword;
+                        if (imported.supervisors !== undefined) appData.supervisors = imported.supervisors;
+                        if (imported.subjects !== undefined) appData.subjects = imported.subjects;
+                        if (imported.classes !== undefined) appData.classes = imported.classes;
+                        if (imported.treatmentPlans !== undefined) appData.treatmentPlans = imported.treatmentPlans;
+                        if (imported.reasons !== undefined) appData.reasons = imported.reasons;
+                        if (imported.pendingReasons !== undefined) appData.pendingReasons = imported.pendingReasons;
+                        persistData();
+                        initApp();
+                        showToast("تم استيراد الإعدادات بنجاح!");
+                    }
+                } catch(err) {
+                    showToast('ملف إعدادات غير صالح.', 'error');
+                } finally {
+                    if (input) input.value = '';
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function renderSupervisorsConfigList() {
+            const container = document.getElementById('supervisorsConfigList');
+            if(!container) return;
+            container.innerHTML = '';
+            (appData.supervisors || []).forEach((sup, idx) => {
+                container.innerHTML += `<div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border text-sm"><span class="font-semibold">${sup}</span><button onclick="removeSupervisor(${idx})" class="text-red-500 font-bold text-xs">حذف</button></div>`;
+            });
+        }
+        function addSupervisorFromSettings() {
+            const name = document.getElementById('newSupervisorInput').value.trim();
+            if (name && !appData.supervisors.includes(name)) {
+                appData.supervisors.push(name);
+                document.getElementById('newSupervisorInput').value = '';
+                renderSupervisorsConfigList();
+                populateSupervisorsSelect();
+                persistData();
+                showToast("تمت الإضافة!");
+            }
+        }
+        function removeSupervisor(idx) {
+            appData.supervisors.splice(idx, 1);
+            renderSupervisorsConfigList();
+            populateSupervisorsSelect();
+            persistData();
+            showToast("تم الحذف!");
+        }
+
+        function renderSubjectsConfigList() {
+            const container = document.getElementById('subjectsConfigList');
+            if(!container) return;
+            container.innerHTML = '';
+            (appData.subjects || []).forEach((name, idx) => {
+                container.innerHTML += `<div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border text-sm"><span class="font-semibold">${name}</span><button onclick="removeSubject(${idx})" class="text-red-500 font-bold text-xs">حذف</button></div>`;
+            });
+        }
+        function addSubjectFromSettings() {
+            const name = document.getElementById('newSubjectInput').value.trim();
+            if (name && !appData.subjects.includes(name)) {
+                appData.subjects.push(name);
+                document.getElementById('newSubjectInput').value = '';
+                renderSubjectsConfigList();
+                populateSubjectsSelect();
+                persistData();
+                showToast("تمت الإضافة!");
+            }
+        }
+        function removeSubject(idx) {
+            appData.subjects.splice(idx, 1);
+            renderSubjectsConfigList();
+            populateSubjectsSelect();
+            persistData();
+            showToast("تم الحذف!");
+        }
+
+        function renderReasonsConfigList() {
+            const container = document.getElementById('reasonsConfigList');
+            if(!container) return;
+            container.innerHTML = '';
+            (appData.reasons || []).forEach((r, idx) => {
+                container.innerHTML += `<div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border text-sm"><span class="font-semibold">${r}</span><button onclick="removeReason(${idx})" class="text-red-500 font-bold text-xs">حذف</button></div>`;
+            });
+        }
+        function addReasonFromSettings() {
+            const r = document.getElementById('newReasonInput').value.trim();
+            if (r && !appData.reasons.includes(r)) {
+                appData.reasons.push(r);
+                document.getElementById('newReasonInput').value = '';
+                renderReasonsConfigList();
+                populateReasonsList();
+                persistData();
+                showToast("تمت الإضافة!");
+            }
+        }
+        function removeReason(idx) {
+            appData.reasons.splice(idx, 1);
+            renderReasonsConfigList();
+            populateReasonsList();
+            persistData();
+            showToast("تم الحذف!");
+        }
+
+        function renderPendingReasonsConfigList() {
+            const container = document.getElementById('pendingReasonsConfigList');
+            if(!container) return;
+            container.innerHTML = '';
+            (appData.pendingReasons || []).forEach((r, idx) => {
+                container.innerHTML += `<div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border text-sm gap-2"><span class="font-bold flex-grow">${r}</span><button onclick="approvePendingReason(${idx})" class="bg-emerald-600 text-white text-xs px-2 py-1 rounded">اعتماد</button></div>`;
+            });
+        }
+        function approvePendingReason(idx) {
+            const r = appData.pendingReasons[idx];
+            if (r) {
+                if (!appData.reasons.includes(r)) appData.reasons.push(r);
+                appData.pendingReasons.splice(idx, 1);
+                renderPendingReasonsConfigList();
+                renderReasonsConfigList();
+                populateReasonsList();
+                persistData();
+                showToast("تم الاعتماد!");
+            }
+        }
+
+        function renderTreatmentPlansConfig() {
+            const container = document.getElementById('treatmentPlansConfig');
+            if(!container) return;
+            container.innerHTML = '';
+            (appData.treatmentPlans || []).forEach((plan, idx) => {
+                container.innerHTML += `<div class="bg-slate-50 p-3 rounded-xl border text-sm"><div class="flex justify-between font-bold text-red-600"><span>تكرار: ${plan.count}</span><button onclick="removeTreatmentPlan(${idx})" class="text-red-500 text-xs">حذف</button></div><p class="text-xs text-slate-800">${plan.action}</p></div>`;
+            });
+        }
+        function addTreatmentPlan() {
+            const count = parseInt(document.getElementById('newPlanCount').value);
+            const action = document.getElementById('newPlanAction').value.trim();
+            const message = document.getElementById('newPlanMessage').value.trim();
+            const deductScore = document.getElementById('newPlanDeduct').checked;
+            if (!isNaN(count) && action && message) {
+                appData.treatmentPlans.push({ count, action, message, deductScore });
+                persistData();
+                renderTreatmentPlansConfig();
+                showToast("تمت إضافة الخطة!");
+            }
+        }
+        function removeTreatmentPlan(idx) {
+            appData.treatmentPlans.splice(idx, 1);
+            persistData();
+            renderTreatmentPlansConfig();
+            showToast("تم الحذف!");
+        }
+
+        function saveAppDataFile() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `StMark_Data_${appData.academicYear}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            showToast("تم حفظ ملف البيانات بنجاح!");
+        }
+
+        async function shareAppData() {
+            const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+            const file = new File([blob], `StMark_Data_${appData.academicYear}.json`, { type: 'application/json' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try { await navigator.share({ title: 'بيانات نظام مشرف الدور', files: [file] }); return; } catch(e){}
+            }
+            saveAppDataFile();
+        }
+
+        function loadAppDataFile(event) {
+            const input = event?.target;
+            const file = input?.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported && typeof imported === 'object' && Array.isArray(imported.students)) {
+                        appData = normalizeAppData(imported);
+                        persistData();
+                        initApp();
+                        showToast('تم استيراد ملف البيانات بنجاح!');
+                    }
+                } catch(err) {
+                    showToast('ملف غير صالح.', 'error');
+                } finally {
+                    if (input) input.value = '';
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        window.onload = function() {
+            initApp();
+            startFirebaseSync();
+        };
+    </script>
+</body>
+</html>
